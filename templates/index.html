@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Categories Bubble Chart</title>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}"/>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/docs_det.css') }}"/>
+    </head>
+
+    <body>
+
+    <div class="tab">
+        <button class="tablinks" id="artbut" onclick="openTab(event, 'document-list-container')">Articles List</button>
+        <button class="tablinks" id="catbut" onclick="openTab(event, 'category-container')">Categories</button>
+        <button class="tablinks" id="clubut" onclick="openTab(event, 'cluster-container')">Clusters</button>
+    </div>
+
+    <div id="category-container" class="tabcontent">
+        <svg id="category-bubble-chart"></svg>
+    </div>
+
+    <div id="cluster-container" class="tabcontent">
+        <svg id="cluster-bubble-chart"></svg>
+    </div>
+
+    <div id="document-list-container" class="tabcontent">
+    </div>
+
+    <script src="https://d3js.org/d3.v6.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/holtzy/D3-graph-gallery@master/LIB/d3.layout.cloud.js"></script>
+    <script type="text/javascript">
+        var documentdataPath = "{{ url_for('static', filename='data/docs_details.json') }}";
+        var categorydataPath = "{{ url_for('static', filename='data/category_details.json') }}";
+        var clusterdataPath = "{{ url_for('static', filename='data/cluster_details.json') }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/category_bubble.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/cluster_bubble.js') }}"></script>
+
+    <script>
+        // Open the articles tab as a  default tab on page load
+        document.getElementById("artbut").click();
+
+        // This function will be called when the user clicks on a tab button and will show/hide the tab content
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            // Get all elements with class="tabcontent" and hide them
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+
+            // Get all elements with class="tablinks" and remove the class "active"
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+
+            // Show the current tab, and add an "active" class to the button that opened the tab
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+        // This function list the articles in the articles tab and shows the details when clicked
+        function updateArticleList(articles) {
+            // format the data
+            const docformattedData = Object.keys(articles).map(key => ({
+                id: key,
+                link: articles[key].link,
+                headline: articles[key].headline,
+                date: articles[key].date,
+                authors: articles[key].authors,
+                short_description: articles[key].short_description,
+                keywords: articles[key].keywords
+            }));
+
+            // This function will be called when the user clicks on a document title and will show/hide the details
+            function toggleDetails(clickedDiv) {
+                // Get the details div for the clicked article
+                var details = clickedDiv.nextElementSibling;
+                // If the details div is hidden, show it. Otherwise, hide it.
+                if (details.style.display === "none" || !details.style.display) {
+                    details.style.display = "block";
+                    // Call a function to load and display the word cloud if it hasn't been loaded yet
+                    if (!details.wordCloudLoaded) {
+                        loadWordCloud(details, clickedDiv.dataset.articleId);
+                        // Set a flag on the details div to indicate that the word cloud has been loaded
+                        details.wordCloudLoaded = true;
+                         }
+                } else {
+                    details.style.display = "none";
+                }
+            }
+
+            // This function will load the word cloud for the specified article and append it to the specified div
+            function loadWordCloud(detailsDiv, articleId) {
+                // Get the article data for the specified article
+                const article = docformattedData[articleId];
+                // Set the dimensions and margins of the word cloud
+                var margin = {top: 10, right: 10, bottom: 10, left: 10},
+                width = 350 - margin.left - margin.right,
+                height = 350 - margin.top - margin.bottom;
+                // Set the color scale
+                var colorScale = d3.scaleOrdinal().range(["#884400", "#448800", "#888800", "#444400"]);
+                // get the word cloud placeholder div
+                const wordCloudPlaceholder = detailsDiv.querySelector('.wordCloudPlaceholder');
+                // set the minimum and maximum font sizes
+                var minSize = d3.min(article.keywords, function(d) { return d[1]; });
+                var maxSize = d3.max(article.keywords, function(d) { return d[1]; });
+                // append the svg object to the word cloud placeholder div
+                var svg = d3.select(wordCloudPlaceholder).append("svg")
+                    .attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                // set the font size scale
+                var fontSizeScale = d3.scaleLinear()
+                    .domain([minSize, maxSize])
+                    .range([10, 100]);
+                // construct the word cloud layout
+                var layout = d3.layout.cloud()
+                    .size([width, height])
+                    .words(article.keywords.map(function(d) { return {text: d[0], size: fontSizeScale(d[1])}; }))
+                    .padding(5)
+                    .rotate(function() { return ~~(Math.random() * 2) * 90; })
+                    .fontSize(function(d) { return d.size; })
+                    .on("end", draw);
+                // start the layout process
+                layout.start();
+
+            // This function will be called when the word cloud layout is complete and will draw the words
+            function draw(words) {
+                svg.append("g")
+                    .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
+                    .selectAll("text")
+                    .data(words)
+                    .enter().append("text")
+                    .style("font-size", function(d) { return d.size; })
+                    .style("fill", function(d) { return colorScale(d.text); })
+                    .attr("text-anchor", "middle")
+                    .style("font-family", "Impact")
+                    .attr("transform", function(d) {
+                      return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+                    })
+                    .text(function(d) { return d.text; });
+            }
+            }
+            // Get the container for the document list
+            const container = document.getElementById('document-list-container');
+            // Add a click event listener to the container
+            document.getElementById('document-list-container').addEventListener('click', function(event) {
+            // Check if the clicked element has the class 'docTitle'
+            if (event.target && event.target.classList.contains('docTitle')) {
+                // If so, call the toggleDetails function and pass it the clicked element
+                toggleDetails(event.target);
+            }
+            });
+            // Clear the existing content
+            container.innerHTML = '';
+            // Create a list container
+            const ul = document.createElement('ul');
+            // Loop through the articles
+            docformattedData.forEach(article => {
+                // Create a list item
+                const li = document.createElement('li');
+                // add an id to the list item
+                li.id = "docList";
+                // Create a div for the article headline, which when clicked, will show/hide details
+                const div = document.createElement('div');
+                // set text content to the article's headline
+                div.textContent = article.headline;
+                // Add a class for styling and identification
+                div.className = 'docTitle';
+                // Create a div for article details (initially hidden)
+                const detailsDiv = document.createElement('div');
+                // Add a class for styling and identification
+                detailsDiv.className = 'docDetails';
+                // Hide the details div
+                detailsDiv.style.display = 'none';
+                // Create an anchor element
+                const a = document.createElement('a');
+                // Set the href to the article's URL
+                a.href = article.link;
+                // Set the text content to 'link'
+                a.textContent = 'link';
+                // Set the target to open in a new tab
+                a.target = "_blank";
+                // Create a paragraph element
+                const p = document.createElement('p');
+                // set the text to the article's date
+                p.textContent = "Date: " + article.date;
+                // Create a paragraph element
+                const p2 = document.createElement('p');
+                // set the text to the article's authors
+                p2.textContent = "Authors: " + article.authors;
+                // Create a paragraph element
+                const p3 = document.createElement('p');
+                // set the text to the short description
+                p3.textContent = "Short Description: " + article.short_description;
+                // Create a div for the word cloud
+                const wordCloudPlaceholder = document.createElement('div');
+                // Add a class for styling and identification
+                wordCloudPlaceholder.className = 'wordCloudPlaceholder';
+                // Set a data attribute on the title div to store the article's identifier
+                div.dataset.articleId = article.id;
+
+            // append the link, paragraphs, and word cloud placeholder to the details div
+            detailsDiv.appendChild(a);
+            detailsDiv.appendChild(p);
+            detailsDiv.appendChild(p2);
+            detailsDiv.appendChild(p3);
+            detailsDiv.appendChild(wordCloudPlaceholder);
+            // append the headline div and details div to the list item
+            li.appendChild(div);
+            li.appendChild(detailsDiv);
+            ul.appendChild(li);
+        });
+            container.appendChild(ul);
+        }
+
+        (async () => {
+            const doc_data = await d3.json(documentdataPath);
+            updateArticleList(doc_data);
+        })();
+
+    </script>
+
+    </body>
+
+</html>

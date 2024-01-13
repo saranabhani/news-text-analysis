@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Category Details</title>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/details.css') }}"/>
+    </head>
+    <header id="header"></header>
+    <body>
+    <div class="tab">
+        <button class="tablinks" id="wcbut" onclick="openTab(event, 'wordcloud')">Word Cloud</button>
+        <button class="tablinks" onclick="openTab(event, 'document-list-container')">Articles List</button>
+    </div>
+    <div id="wordcloud" class="tabcontent"></div>
+    <div id="document-list-container" class="tabcontent"></div>
+
+    <script src="https://d3js.org/d3.v6.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/holtzy/D3-graph-gallery@master/LIB/d3.layout.cloud.js"></script>
+    <script type="text/javascript">
+        var dataPath = "{{ url_for('static', filename='data/category_details.json') }}";
+    </script>
+
+    <script>
+        // get the header element
+        var element = document.getElementById("header");
+        // click on the word cloud button by default
+        document.getElementById("wcbut").click();
+        // function to open the tab
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            // Get all elements with class="tabcontent" and hide them
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+
+            // Get all elements with class="tablinks" and remove the class "active"
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+
+            // Show the current tab, and add an "active" class to the button that opened the tab
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+        // function to get the query parameter from the url
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+        // function to display the document list
+        function updateDocumentList(articles) {
+            // Get the document list container
+            const container = document.getElementById('document-list-container');
+            // Clear the existing content
+            container.innerHTML = '';
+            // create a list container
+            const ul = document.createElement('ul');
+            // for each article
+            articles.forEach(article => {
+                // Create a list item
+                const li = document.createElement('li');
+                // Create an anchor element
+                const a = document.createElement('a');
+                // Set the href to the article's URL
+                a.href = article.link;
+                // Set the link text to the article's title
+                a.textContent = article.headline;
+                // Open the link in a new tab
+                a.target = "_blank";
+                // Add the anchor to the list item
+                li.appendChild(a);
+                // Add the list item to the list container
+                ul.appendChild(li);
+            });
+            // Add the list container to the document list container
+            container.appendChild(ul);
+        }
+        // function to display the data
+        const Displaydata = data => {
+            // get the category name from the query parameter
+            const categoryName = getQueryParam('category');
+            // get the category data
+            const categoryData = data[categoryName];
+            // get the category keywords
+            const categoryKeywords = categoryData['keywords'];
+            // set the header text to the category name
+            element.textContent = categoryName;
+            // set the margin, width and height for the word cloud
+            var margin = {top: 10, right: 10, bottom: 10, left: 10},
+                width = 950 - margin.left - margin.right,
+                height = 950 - margin.top - margin.bottom;
+            // create the svg element for the word cloud
+            var svg = d3.select("#wordcloud").append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            // get the min and max size of the keywords
+            var minSize = d3.min(categoryKeywords, function(d) { return d[1]; });
+            var maxSize = d3.max(categoryKeywords, function(d) { return d[1]; });
+            // set the color scale
+            var colorScale = d3.scaleOrdinal().range(["#884400", "#448800", "#888800", "#444400"]);
+            // set the font size scale
+            var fontSizeScale = d3.scaleLinear()
+              .domain([minSize, maxSize])
+              .range([10, 100]);
+            // create the word cloud layout
+            var layout = d3.layout.cloud()
+              .size([width, height])
+              .words(categoryKeywords.map(function(d) { return {text: d[0], size: fontSizeScale(d[1])}; }))
+              .padding(5)        //space between words
+              .rotate(function() { return ~~(Math.random() * 2) * 90; })
+              .fontSize(function(d) { return d.size; })      // font size of words
+              .on("end", draw);
+            // start the layout
+            layout.start();
+        // function to draw the word cloud
+        function draw(words) {
+            svg.append("g")
+                .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
+                .selectAll("text")
+                .data(words)
+                .enter().append("text")
+                .style("font-size", function(d) { return d.size; })
+                .style("fill", function(d) { return colorScale(d.text); })
+                .attr("text-anchor", "middle")
+                .style("font-family", "Impact")
+                .attr("transform", function(d) {
+                  return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+                }).text(function(d) { return d.text; });
+        }
+        // call the function to display the document list
+        updateDocumentList(categoryData['articles']);
+        }
+
+        (async () => {
+            // get the data
+            const data = await d3.json(dataPath);
+            // display the data
+            Displaydata(data);
+        })();
+    </script>
+    </body>
+</html>

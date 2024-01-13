@@ -1,0 +1,129 @@
+body {
+    margin: 0;
+    width: 100vw;
+    height: 100vh;  
+}
+
+text {
+    text-anchor: middle;
+    font: 10px sans-serif;
+    pointer-events: none;
+    opacity: 1;
+}
+
+circle {
+    cursor: pointer;
+}
+
+img {
+    width: 200px;
+}
+
+a {
+    color: #FFF;
+    font-weight: bold;
+    display: block;
+}
+
+span {
+    display: inline-block;
+    margin-top: 5px;
+    padding: 2px 10px;
+    border-radius: 2px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.html { background: #F16529; }
+.css  { background: #1C88C7; }
+.js   { background: #FCC700; }
+
+/*.tooltip {*/
+/*    position: absolute;*/
+/*    visibility: hidden;*/
+/*    background-color: #111;*/
+/*    display: flex;*/
+/*    font-family: sans-serif;*/
+/*    max-width: 500px;*/
+/*}*/
+.tooltip {
+    position: absolute;
+    text-align: center;
+    padding: 12px;
+    background: lightgrey;
+    border: 0;
+    border-radius: 8px;
+    pointer-events: none;
+    font-size: 14px;
+}
+
+.tooltip div {
+    padding: 10px;
+}
+
+.tab {
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
+}
+
+.tab button {
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: 0.3s;
+  font-size: 17px;
+}
+
+.tab button:hover {
+  background-color: #ddd;
+}
+
+.tab button.active {
+  background-color: #ccc;
+}
+
+.tabcontent {
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-top: none;
+}
+#document-list-container {
+    background-color: #f8f8f8;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+    max-height: 800px;
+    margin-top: 10px;
+}
+
+#document-list-container ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+#document-list-container ul li {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    cursor: pointer;
+}
+
+#document-list-container ul li:hover {
+    background-color: #ececec;
+}
+
+#document-list-container ul li a {
+    text-decoration: none;
+    color: #333;
+    display: block;
+}
+
+#document-list-container ul li a:hover {
+    color: #000;
+}
